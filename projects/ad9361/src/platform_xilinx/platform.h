@@ -45,6 +45,15 @@
 #include <stdint.h>
 #include "util.h"
 
+#include <xparameters.h>
+#ifdef _XPARAMETERS_PS_H_
+#include <xspips.h>
+#include <xgpiops.h>
+#else
+#include <xspi.h>
+#include <xgpio.h>
+#endif
+
 /******************************************************************************/
 /********************** Macros and Constants Definitions **********************/
 /******************************************************************************/
@@ -133,18 +142,61 @@ enum adc_data_sel {
 	ADC_DATA_SEL_RAMP, /* TBD */
 };
 
+#define SUCCESS		0
+#define FAILURE		-1
+
+#define	SPI_CPHA	0x01
+#define	SPI_CPOL	0x02
+
+#define SPI_CS_DECODE	0x01
+
+typedef enum spi_type {
+	XILINX_SPI
+} spi_type;
+
+typedef enum spi_mode {
+	SPI_MODE_0 = (0 | 0),
+	SPI_MODE_1 = (0 | SPI_CPHA),
+	SPI_MODE_2 = (SPI_CPOL | 0),
+	SPI_MODE_3 = (SPI_CPOL | SPI_CPHA)
+} spi_mode;
+
+typedef struct spi_desc {
+	enum spi_type	type;
+	uint32_t		id;
+	uint32_t		max_speed_hz;
+	enum spi_mode	mode;
+	uint8_t			chip_select;
+	uint32_t		flags;
+#ifdef _XPARAMETERS_PS_H_
+	XSpiPs_Config	*config;
+	XSpiPs			instance;
+#else
+	XSpi			instance;
+#endif
+} spi_desc;
+
+typedef struct spi_init_param {
+	enum spi_type	type;
+	uint32_t	id;
+	uint32_t	max_speed_hz;
+	enum spi_mode	mode;
+	uint8_t		chip_select;
+	uint32_t	flags;
+} spi_init_param;
+
+#define CLK_CS			0x0f
+
 /******************************************************************************/
 /************************ Functions Declarations ******************************/
 /******************************************************************************/
-int32_t spi_init(uint32_t device_id,
-		 uint8_t  clk_pha,
-		 uint8_t  clk_pol);
-int32_t spi_read(struct spi_device *spi,
-		 uint8_t *data,
-		 uint8_t bytes_number);
-int spi_write_then_read(struct spi_device *spi,
-			const unsigned char *txbuf, unsigned n_tx,
-			unsigned char *rxbuf, unsigned n_rx);
+/* Initialize the SPI communication peripheral. */
+int32_t spi_init(struct spi_desc **desc,
+		 const struct spi_init_param *param);
+/* Write and read data to/from SPI. */
+int32_t spi_write_and_read(struct spi_desc *desc,
+			   uint8_t *data,
+			   uint8_t bytes_number);
 void gpio_init(uint32_t device_id);
 void gpio_direction(uint8_t pin, uint8_t direction);
 bool gpio_is_valid(int number);

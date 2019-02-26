@@ -284,6 +284,7 @@ typedef struct {
 			uint32_t rate);
 	int32_t		(*ad9361_rfpll_ext_set_rate)(struct refclk_scale *clk_priv,
 			uint32_t rate);
+	struct spi_desc 	*spi;
 } AD9361_InitParam;
 
 typedef struct {

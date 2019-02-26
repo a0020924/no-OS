@@ -84,11 +84,11 @@ int32_t ad9361_init (struct ad9361_rf_phy **ad9361_phy,
 		return -ENOMEM;
 	}
 
-	phy->spi = (struct spi_device *)zmalloc(sizeof(*phy->spi));
+	phy->spi = (struct spi_desc *)zmalloc(sizeof(*phy->spi));
 	if (!phy->spi) {
 		return -ENOMEM;
 	}
-
+	phy->spi = init_param->spi;
 	phy->clk_refin = (struct clk *)zmalloc(sizeof(*phy->clk_refin));
 	if (!phy->clk_refin) {
 		return -ENOMEM;
@@ -115,7 +115,7 @@ int32_t ad9361_init (struct ad9361_rf_phy **ad9361_phy,
 	phy->dev_sel = init_param->dev_sel;
 
 	/* Identification number */
-	phy->spi->id_no = init_param->id_no;
+	phy->spi->id = init_param->id_no;
 	phy->id_no = init_param->id_no;
 
 	/* Reference Clock */
