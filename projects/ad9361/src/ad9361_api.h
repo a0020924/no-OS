@@ -285,6 +285,9 @@ typedef struct {
 	int32_t		(*ad9361_rfpll_ext_set_rate)(struct refclk_scale *clk_priv,
 			uint32_t rate);
 	struct spi_desc 	*spi;
+	struct gpio_desc 	*gpio_desc_device_id;
+	struct gpio_desc 	*gpio_desc_resetb;
+	struct gpio_desc 	*gpio_desc_sync;
 } AD9361_InitParam;
 
 typedef struct {

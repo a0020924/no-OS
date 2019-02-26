@@ -193,56 +193,90 @@ int32_t spi_write_and_read(struct spi_desc *desc,
 	return 0;
 }
 
-/***************************************************************************//**
- * @brief gpio_init
-*******************************************************************************/
-void gpio_init(uint32_t device_id)
+/**
+ * @brief Obtain the GPIO decriptor.
+ * @param desc - The GPIO descriptor.
+ * @param gpio_number - The number of the GPIO.
+ * @return SUCCESS in case of success, FAILURE otherwise.
+ */
+int32_t gpio_get(struct gpio_desc **desc,
+		 uint8_t gpio_number)
 {
+	gpio_desc *descriptor;
+	int32_t ret;
+
+	descriptor = (struct gpio_desc *) malloc(sizeof(*descriptor));
+	if (!descriptor)
+		return FAILURE;
+
 #ifdef _XPARAMETERS_PS_H_
-	gpio_config = XGpioPs_LookupConfig(device_id);
-	XGpioPs_CfgInitialize(&gpio_instance, gpio_config, gpio_config->BaseAddr);
+	descriptor->config = XGpioPs_LookupConfig(0);
+	if (descriptor->config == NULL)
+		goto error;
+
+	ret = XGpioPs_CfgInitialize(&descriptor->instance,
+				    descriptor->config, descriptor->config->BaseAddr);
+	if (ret != 0)
+		goto error;
 #else
-	gpio_config = XGpio_LookupConfig(device_id);
+	ret = XGpio_Initialize(&descriptor->instance, 0);
+	if (ret != 0)
+		goto error;
 #endif
+
+	descriptor->number = gpio_number;
+
+	*desc = descriptor;
+
+	return SUCCESS;
+
+error:
+	free(descriptor);
+
+	return FAILURE;
 }
 
-/***************************************************************************//**
- * @brief gpio_direction
-*******************************************************************************/
-void gpio_direction(uint8_t pin, uint8_t direction)
+/**
+ * @brief Enable the output direction of the specified GPIO.
+ * @param desc - The GPIO descriptor.
+ * @param value - The value.
+ *                Example: GPIO_HIGH
+ *                         GPIO_LOW
+ * @return SUCCESS in case of success, FAILURE otherwise.
+ */
+int32_t gpio_direction_output(struct gpio_desc *desc,
+			      uint8_t value)
 {
 #ifdef _XPARAMETERS_PS_H_
-	XGpioPs_SetDirectionPin(&gpio_instance, pin, direction);
-	XGpioPs_SetOutputEnablePin(&gpio_instance, pin, 1);
+	XGpioPs_SetDirectionPin(&desc->instance, desc->number, 1);
+
+	XGpioPs_SetOutputEnablePin(&desc->instance, desc->number, 1);
+
+	XGpioPs_WritePin(&desc->instance, desc->number, value);
 #else
-	uint32_t config = 0;
-	uint32_t tri_reg_addr;
+	uint8_t pin = desc->number;
+	uint8_t channel;
+	uint32_t reg_val;
 
 	if (pin >= 32) {
-		tri_reg_addr = XGPIO_TRI2_OFFSET;
+		channel = 2;
 		pin -= 32;
 	} else
-		tri_reg_addr = XGPIO_TRI_OFFSET;
+		channel = 1;
 
-	config = Xil_In32((gpio_config->BaseAddress + tri_reg_addr));
-	if(direction) {
-		config &= ~(1 << pin);
-	} else {
-		config |= (1 << pin);
-	}
-	Xil_Out32((gpio_config->BaseAddress + tri_reg_addr), config);
-#endif
-}
+	reg_val = XGpio_GetDataDirection(&desc->instance, channel);
+	reg_val &= ~(1 << pin);
+	XGpio_SetDataDirection(&desc->instance, channel, reg_val);
 
-/***************************************************************************//**
- * @brief gpio_is_valid
-*******************************************************************************/
-bool gpio_is_valid(int number)
-{
-	if(number >= 0)
-		return 1;
+	reg_val = XGpio_DiscreteRead(&desc->instance, channel);
+	if(value)
+		reg_val |= (1 << pin);
 	else
-		return 0;
+		reg_val &= ~(1 << pin);
+	XGpio_DiscreteWrite(&desc->instance, channel, reg_val);
+#endif
+
+	return SUCCESS;
 }
 
 /***************************************************************************//**
@@ -272,12 +306,39 @@ void gpio_data(uint8_t pin, uint8_t data)
 #endif
 }
 
-/***************************************************************************//**
- * @brief gpio_set_value
-*******************************************************************************/
-void gpio_set_value(unsigned gpio, int value)
+/**
+ * @brief Set the value of the specified GPIO.
+ * @param desc - The GPIO descriptor.
+ * @param value - The value.
+ *                Example: GPIO_HIGH
+ *                         GPIO_LOW
+ * @return SUCCESS in case of success, FAILURE otherwise.
+ */
+int32_t gpio_set_value(struct gpio_desc *desc,
+		       uint8_t value)
 {
-	gpio_data(gpio, value);
+#ifdef _XPARAMETERS_PS_H_
+	XGpioPs_WritePin(&desc->instance, desc->number, value);
+#else
+	uint8_t pin = desc->number;
+	uint8_t channel;
+	uint32_t reg_val;
+
+	if (pin >= 32) {
+		channel = 2;
+		pin -= 32;
+	} else
+		channel = 1;
+
+	reg_val = XGpio_DiscreteRead(&desc->instance, channel);
+	if(value)
+		reg_val |= (1 << pin);
+	else
+		reg_val &= ~(1 << pin);
+	XGpio_DiscreteWrite(&desc->instance, channel, reg_val);
+#endif
+
+	return 0;
 }
 
 /***************************************************************************//**

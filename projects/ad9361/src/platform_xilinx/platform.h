@@ -187,6 +187,22 @@ typedef struct spi_init_param {
 
 #define CLK_CS			0x0f
 
+typedef enum gpio_type {
+	XILINX_GPIO
+} gpio_type;
+
+typedef struct gpio_desc {
+	enum gpio_type	type;
+	uint32_t		id;
+	uint8_t			number;
+#ifdef _XPARAMETERS_PS_H_
+	XGpioPs_Config	*config;
+	XGpioPs			instance;
+#else
+	XGpio			instance;
+#endif
+} gpio_desc;
+
 /******************************************************************************/
 /************************ Functions Declarations ******************************/
 /******************************************************************************/
@@ -197,10 +213,14 @@ int32_t spi_init(struct spi_desc **desc,
 int32_t spi_write_and_read(struct spi_desc *desc,
 			   uint8_t *data,
 			   uint8_t bytes_number);
-void gpio_init(uint32_t device_id);
-void gpio_direction(uint8_t pin, uint8_t direction);
-bool gpio_is_valid(int number);
-void gpio_set_value(unsigned gpio, int value);
+/* Obtain the GPIO decriptor. */
+int32_t gpio_get(struct gpio_desc **desc,
+		 uint8_t gpio_number);
+/* Enable the output direction of the specified GPIO. */
+int32_t gpio_direction_output(struct gpio_desc *desc,
+			      uint8_t value);
+int32_t gpio_set_value(struct gpio_desc *desc,
+		       uint8_t value);
 void udelay(unsigned long usecs);
 void mdelay(unsigned long msecs);
 unsigned long msleep_interruptible(unsigned int msecs);
